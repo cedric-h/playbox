@@ -4,7 +4,7 @@ pub fn panic(_: []const u8, _: ?*const std.builtin.StackTrace) noreturn {
     unreachable;
 }
 
-const size = [2]u32{ 256, 256 };
+const size = [2]u32{ 500, 500 };
 
 pub const State = extern struct {
     pixels: [size[0] * size[1]][4]u8,
@@ -77,10 +77,20 @@ const Quad = struct {
     size: f32,
 };
 
+const Sphere = struct {
+    pos: [3]f32,
+    size: f32,
+};
+
 var quad: Quad = .{
     .pos = [3]f32{ 0, 0, 1 },
     .norm = [3]f32{ 0, 0, -1 },
     .tan = [3]f32{ 0, 1, 0 },
+    .size = 0.25,
+};
+
+var sphere: Sphere = .{
+    .pos = [3]f32{ 0, 0, 1 },
     .size = 0.25,
 };
 
@@ -89,51 +99,67 @@ export fn draw(dt: f32) void {
     const heightf: f32 = @intToFloat(f32, size[1]);
 
     var state = @intToPtr(*State, 2 * std.mem.page_size);
-
-    quad.norm = [3]f32{
-        @cos(dt * 0.001),
-        0,
-        @sin(dt * 0.001),
-    };
+    // quad.norm = norm([3]f32{
+    //     @cos(dt * 0.002),
+    //     @sin(dt * 0.002) / @cos(dt * 0.001),
+    //     @sin(dt * 0.001),
+    // });
 
     for (state.pixels) |*pix, i| {
         const x = @intToFloat(f32, i / size[0]);
         const y = @intToFloat(f32, i % size[0]);
 
-        const lookAt = [3]f32{ 0.5 - x / widthf, 0.5 - y / heightf, 1.0 };
+        const lookAt = norm([3]f32{ 0.5 - x / widthf, 0.5 - y / heightf, 1.0 });
         const look = Ray{
             .origin = eye,
-            .direction = norm(lookAt),
+            .direction = lookAt,
         };
+
+        pix[0] = 0;
+        pix[1] = 0;
+        pix[2] = 0;
 
         // cast ray against quad
 
-        // get time until plane intersection
-        const d = dot(quad.pos, mulf(quad.norm, -1));
-        const t = -(d + dot(quad.norm, look.origin)) / dot(quad.norm, look.direction);
+        // // get time until plane intersection
+        // const d = dot(sphere.pos, mulf(quad.norm, -1));
+        // const t = -(d + dot(quad.norm, look.origin)) / dot(quad.norm, look.direction);
 
-        // didn't hit the plane
-        if (t < 0) continue;
+        // const L = magnitude(sub(sphere.pos, look.origin));
+        const L = sub(sphere.pos, look.origin);
+        // const tc = dot([3]f32{ L, L, L }, look.direction);
+
+        const t2 = dot(L, look.direction);
+
+        // didn't hit the sphere
+        if (t2 < 0) continue;
+
+        const d2 = dot(L, L) - (t2 * t2);
+        if (d2 > sphere.size * sphere.size) continue;
+
+        const t3 = @sqrt(sphere.size * sphere.size - d2);
+        const t0 = t2 - t3;
 
         // where the ray hits the surface
-        const p = add(look.origin, mulf(look.direction, t));
+        const p = add(look.origin, mulf(look.direction, t0));
 
-        const to_p = sub(p, quad.pos);
-        var u = dot(quad.tan, to_p);
-        var v = dot(cross(quad.tan, quad.norm), to_p);
-        u = u / quad.size + 0.5;
-        v = v / quad.size + 0.5;
+        const to_p = norm(sub(p, sphere.pos));
+        const light_multip = dot(to_p, norm([3]f32{ @sin(dt * 0.001), 0, @cos(dt * 0.001) }));
+        // var u = dot(quad.tan, to_p);
+        // var v = dot(cross(quad.tan, quad.norm), to_p);
+        // u = u / sphere.size + 0.5;
+        // v = v / sphere.size + 0.5;
 
-        var r = @floatToInt(u8, u * 255);
-        var g = @floatToInt(u8, v * 255);
-        if (u <= 0 or v <= 0) {
-            r = 0;
-            g = 0;
-        }
-        if (u >= 1 or v >= 1) {
-            r = 0;
-            g = 0;
-        }
+        var r = @floatToInt(u8, 255 * light_multip);
+        var g = @floatToInt(u8, 255 * light_multip);
+        // if (u <= 0 or v <= 0) {
+        //     r = 0;
+        //     g = 0;
+        // }
+        // if (u >= 1 or v >= 1) {
+        //     r = 0;
+        //     g = 0;
+        // }
 
         // turn quad uv into color
         pix[0] = r;
