@@ -150,7 +150,7 @@ export fn draw(dt: f32) void {
         // u = u / sphere.size + 0.5;
         // v = v / sphere.size + 0.5;
 
-        var r = @floatToInt(u8, 255 * light_multip);
+        var r = @floatToInt(u8, 255 * @exp(light_multip));
         var g = @floatToInt(u8, 255 * light_multip);
         // if (u <= 0 or v <= 0) {
         //     r = 0;
