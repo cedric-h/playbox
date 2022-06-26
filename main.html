@@ -1,42 +1,45 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <title>Hello, world!</title>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <meta name="description" content="" />
   <script>
-(async () => {
-    const { instance: { exports: zig } } =
+    (async () => {
+      const { instance: { exports: zig } } =
         await WebAssembly.instantiateStreaming(
-            fetch('zig-out/lib/wasmsock.wasm'),
-            { env: { print: console.log } }
+          fetch('zig-out/lib/wasmsock.wasm'),
+          { env: { _print: console.log } }
         );
 
-    const buf = new Uint8ClampedArray(
+      const buf = new Uint8ClampedArray(
         zig.memory.buffer,
-        2*(1 << 16),
-        zig.width()*zig.height()*4
-    );
-    const img = new ImageData(buf, zig.width(), zig.height());
+        2 * (1 << 16),
+        zig.width() * zig.height() * 4
+      );
+      const img = new ImageData(buf, zig.width(), zig.height());
 
-    const canvas = document.getElementsByTagName("canvas")[0]
-    canvas.width = zig.width();
-    canvas.height = zig.height();
+      const canvas = document.getElementsByTagName("canvas")[0]
+      canvas.width = zig.width();
+      canvas.height = zig.height();
 
-    (function frame(dt) {
+      (function frame(dt) {
         zig.draw(dt);
 
         canvas
-            .getContext("2d")
-            .putImageData(img, 0, 0);
+          .getContext("2d")
+          .putImageData(img, 0, 0);
 
         requestAnimationFrame(frame);
+      })();
     })();
-})();
   </script>
 </head>
+
 <body>
   <canvas></canvas>
 </body>
+
 </html>
